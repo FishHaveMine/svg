@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title></title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="css/style.css" rel="stylesheet">
+</head>
+
+<body>
+  <?xml version="1.0" standalone="no"?>
+  <svg width="200" height="250" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <rect x="10" y="10" width="30" height="30" />
+    <rect x="60" y="10" rx="10" ry="10" width="30" height="30" />
+    <!-- <rect x="10" y="10" width="30" height="30" stroke="black" fill="transparent" stroke-width="5" />
+    <rect x="60" y="10" rx="10" ry="10" width="30" height="30" stroke="black" fill="transparent" stroke-width="5" /> -->
+
+    <circle cx="25" cy="75" r="20" stroke="red" fill="transparent" stroke-width="5" />
+    <ellipse cx="75" cy="75" rx="20" ry="5" stroke="red" fill="transparent" stroke-width="5" />
+
+    <line x1="10" x2="50" y1="110" y2="150" stroke="orange" fill="transparent" stroke-width="5" />
+    <polyline points="60 110 65 120 70 115 75 130 80 125 85 140 90 135 95 150 100 145" stroke="orange"
+      fill="transparent" stroke-width="5" />
+
+    <polygon points="50 160 55 180 70 180 60 190 65 205 50 195 35 205 40 190 30 180 45 180" stroke="green"
+      fill="transparent" stroke-width="5" />
+
+    <path d="M20,230 Q40,205 50,230 T90,230" fill="none" stroke="blue" stroke-width="5" />
+  </svg>
+
+  <svg width="190px" height="160px" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <path d="M10 10 C 20 20, 40 20, 50 10" stroke="black" fill="transparent" />
+    <path d="M70 10 C 70 20, 120 20, 120 10" stroke="black" fill="transparent" />
+    <path d="M130 10 C 120 20, 180 20, 170 10" stroke="black" fill="transparent" />
+    <path d="M10 60 C 20 80, 40 80, 50 60" stroke="black" fill="transparent" />
+    <path d="M70 60 C 70 80, 110 80, 110 60" stroke="black" fill="transparent" />
+    <path d="M130 60 C 120 80, 180 80, 170 60" stroke="black" fill="transparent" />
+    <path d="M10 110 C 20 140, 40 140, 50 110" stroke="black" fill="transparent" />
+    <path d="M70 110 C 70 140, 110 140, 110 110" stroke="black" fill="transparent" />
+    <path d="M130 110 C 120 140, 180 140, 170 110" stroke="black" fill="transparent" />
+  </svg>
+
+
+  <svg width="190px" height="160px" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <path id="my_path" d="M 20,20 C 40,40 80,40 100,20" fill="transparent" />
+    <text>
+      <textPath xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#my_path">
+        This text follows a curve.
+      </textPath>
+    </text>
+  </svg>
+
+
+  <canvas id="stockGraph" width="500" height="500"></canvas>
+
+  <canvas id="canvas" width="500" height="500"></canvas>
+
+  <canvas id="clock" width="500" height="500"></canvas>
+</body>
+<script>
+  var canvas = document.getElementById('stockGraph')
+  var ctx = document.getElementById('stockGraph').getContext('2d');
+  var dragStart, dragged;
+  var offset = 0;
+
+  trackTransforms(ctx);
+  var lastX = canvas.width / 2, lastY = canvas.height / 2;
+  var dragStart, dragged;
+  canvas.addEventListener('mousedown', function (evt) {
+    document.body.style.mozUserSelect = document.body.style.webkitUserSelect = document.body.style.userSelect = 'none';
+    lastX = evt.offsetX || (evt.pageX - canvas.offsetLeft);
+    lastY = evt.offsetY || (evt.pageY - canvas.offsetTop);
+    dragStart = ctx.transformedPoint(lastX, lastY);
+    dragged = false;
+  }, false);
+  canvas.addEventListener('mousemove', function (evt) {
+    lastX = evt.offsetX || (evt.pageX - canvas.offsetLeft);
+    lastY = evt.offsetY || (evt.pageY - canvas.offsetTop);
+    dragged = true;
+    if (dragStart) {
+      var pt = ctx.transformedPoint(lastX, lastY);
+      ctx.translate(pt.x - dragStart.x, pt.y - dragStart.y);
+      redraw();
+    }
+  }, false);
+  canvas.addEventListener('mouseup', function (evt) {
+    dragStart = null;
+    if (!dragged) zoom(evt.shiftKey ? -1 : 1);
+  }, false);
+  var scaleFactor = 1.1;
+  var zoom = function (clicks) {
+    if (clicks == 1) return;
+    var pt = ctx.transformedPoint(lastX, lastY);
+    ctx.translate(pt.x, pt.y);
+    var factor = Math.pow(scaleFactor, clicks);
+    ctx.scale(factor, factor);
+    ctx.translate(-pt.x, -pt.y);
+    redraw();
+  }
+  var handleScroll = function (evt) {
+    var delta = evt.wheelDelta ? evt.wheelDelta / 40 : evt.detail ? -evt.detail : 0;
+    if (delta) zoom(delta);
+    return evt.preventDefault() && false;
+  };
+  canvas.addEventListener('DOMMouseScroll', handleScroll, false);
+  canvas.addEventListener('mousewheel', handleScroll, false);
+  function redraw() {
+    // Clear the entire canvas
+    var p1 = ctx.transformedPoint(0, 0);
+    var p2 = ctx.transformedPoint(canvas.width, canvas.height);
+    ctx.clearRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  }
+  function trackTransforms(ctx) {
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", 'svg');
+    var xform = svg.createSVGMatrix();
+    ctx.getTransform = function () { return xform; };
+
+    var savedTransforms = [];
+    var save = ctx.save;
+    ctx.save = function () {
+      savedTransforms.push(xform.translate(0, 0));
+      return save.call(ctx);
+    };
+
+    var restore = ctx.restore;
+    ctx.restore = function () {
+      xform = savedTransforms.pop();
+      return restore.call(ctx);
+    };
+
+    var scale = ctx.scale;
+    ctx.scale = function (sx, sy) {
+      xform = xform.scaleNonUniform(sx, sy);
+      return scale.call(ctx, sx, sy);
+    };
+
+    var rotate = ctx.rotate;
+    ctx.rotate = function (radians) {
+      xform = xform.rotate(radians * 180 / Math.PI);
+      return rotate.call(ctx, radians);
+    };
+
+    var translate = ctx.translate;
+    ctx.translate = function (dx, dy) {
+      xform = xform.translate(dx, dy);
+      return translate.call(ctx, dx, dy);
+    };
+
+    var transform = ctx.transform;
+    ctx.transform = function (a, b, c, d, e, f) {
+      var m2 = svg.createSVGMatrix();
+      m2.a = a; m2.b = b; m2.c = c; m2.d = d; m2.e = e; m2.f = f;
+      xform = xform.multiply(m2);
+      return transform.call(ctx, a, b, c, d, e, f);
+    };
+
+    var setTransform = ctx.setTransform;
+    ctx.setTransform = function (a, b, c, d, e, f) {
+      xform.a = a;
+      xform.b = b;
+      xform.c = c;
+      xform.d = d;
+      xform.e = e;
+      xform.f = f;
+      return setTransform.call(ctx, a, b, c, d, e, f);
+    };
+
+    var pt = svg.createSVGPoint();
+    ctx.transformedPoint = function (x, y) {
+      pt.x = x; pt.y = y;
+      return pt.matrixTransform(xform.inverse());
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, 150, 150);
+    ctx.setLineDash([4, 2]);
+    // 设置线条样式
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+    ctx.shadowBlur = 2;
+    ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+    ctx.lineDashOffset = -offset;
+    ctx.strokeRect(10, 10, 50, 50);
+    ctx.strokeRect(60, 10, 50, 50);
+    ctx.strokeRect(10, 60, 50, 50);
+    ctx.strokeRect(60, 60, 50, 50);
+  }
+  function march() {
+    offset++;
+    if (offset > 16) {
+      offset = 0;
+    }
+    draw();
+    setTimeout(march, 20);
+  }
+  march();
+
+  // function drawImage() {
+  //   var ctx = document.getElementById('canvas').getContext('2d');
+
+  //   // 创建新 image 对象，用作图案
+  //   var img = new Image();
+  //   img.src = './Canvas_sun.png';
+  //   img.onload = function () {
+
+  //     // 创建图案
+  //     var ptrn = ctx.createPattern(img, 'repeat');
+  //     ctx.fillStyle = ptrn;
+  //     ctx.fillRect(0, 0, 150, 150);
+
+  //   }
+  // }
+  // drawImage()
+
+  function loadImage(url) {
+    return new Promise(resolve => {
+      const image = new Image();
+      image.addEventListener('load', () => {
+        resolve(image);
+      });
+      image.src = url;
+    });
+  }
+  var sun = new Image();
+  var moon = new Image();
+  var earth = new Image();
+  var timeInterval = null
+  function init() {
+    let sunP = loadImage('./Canvas_sun.png');
+    let moonP = loadImage('./Canvas_moon.png');
+    let earthP = loadImage('./Canvas_earth.png');
+    let promisseAll = [sunP, moonP, earthP]
+    Promise.all(promisseAll).then((values) => {
+      sun = values[0]
+      moon = values[1]
+      earth = values[2]
+      timeInterval && clearInterval(timeInterval)
+      timeInterval = setInterval(() => {
+        drawImage()
+      }, 10);
+    });
+  }
+  function drawImage() {
+    var ctx = document.getElementById('canvas').getContext('2d');
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.clearRect(0, 0, 300, 300); // clear canvas
+
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.strokeStyle = 'rgba(0,153,255,0.4)';
+    ctx.save();
+    ctx.translate(150, 150);
+
+    // Earth
+    var time = new Date();
+    ctx.rotate(((2 * Math.PI) / 60) * time.getSeconds() + ((2 * Math.PI) / 60000) * time.getMilliseconds());
+    ctx.translate(105, 0);
+    ctx.fillRect(0, -12, 50, 24); // Shadow
+    ctx.drawImage(earth, -12, -12);
+
+    // Moon
+    ctx.save();
+    ctx.rotate(((2 * Math.PI) / 6) * time.getSeconds() + ((2 * Math.PI) / 6000) * time.getMilliseconds());
+    ctx.translate(0, 28.5);
+    ctx.drawImage(moon, -3.5, -3.5);
+    ctx.restore();
+
+    ctx.restore();
+
+    ctx.beginPath();
+    ctx.arc(150, 150, 105, 0, Math.PI * 2, false); // Earth orbit
+    ctx.stroke();
+
+    ctx.drawImage(sun, 0, 0, 300, 300);
+
+    window.requestAnimationFrame(draw);
+  }
+  init();
+
+
+  function clock() {
+    var ctx = document.getElementById('clock').getContext('2d');
+    var now = new Date(),
+      sec = now.getSeconds(),
+      min = now.getMinutes(),
+      hr = now.getHours();
+    hr = hr > 12 ? hr - 12 : hr;
+
+    //绘制表盘底色
+    ctx.save();
+    ctx.clearRect(0, 0, 400, 400);
+    ctx.translate(200, 200);
+    ctx.rotate(-Math.PI / 2); //将坐标轴逆时针旋转90度，x轴正方向对准12点方向
+    var lingrad = ctx.createLinearGradient(150, 0, -150, 0);
+    lingrad.addColorStop(0, '#242f37');
+    lingrad.addColorStop(1, '#48585c');
+    ctx.fillStyle = lingrad;
+    ctx.beginPath();
+    ctx.arc(0, 0, 150, 0, Math.PI * 2, true);
+    ctx.fill();
+
+    //小时刻度
+    ctx.save();
+    for (var i = 0; i < 12; i++) {
+      ctx.beginPath();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 3;
+      ctx.rotate(Math.PI / 6);
+      ctx.moveTo(140, 0);
+      ctx.lineTo(120, 0);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    //分钟刻度
+    ctx.save();
+    ctx.beginPath();
+    for (i = 0; i < 60; i++) {
+      if (i % 5 !== 0) {
+        ctx.beginPath();
+        ctx.strokeStyle = '#536b7a';
+        ctx.lineWidth = 2;
+        ctx.moveTo(140, 0);
+        ctx.lineTo(130, 0);
+        ctx.stroke();
+      }
+      ctx.rotate(Math.PI / 30);
+    }
+    ctx.restore();
+
+    //时间文字
+    ctx.save();
+    ctx.rotate(Math.PI / 2);
+    ctx.beginPath();
+    ctx.fillStyle = '#58717e';
+    ctx.font = '32px Microsoft yahei';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('3', 100, 0);
+    ctx.fillText('6', 0, 100);
+    ctx.fillText('9', -100, 0);
+    ctx.fillText('12', 0, -100);
+    ctx.restore();
+
+    //时针
+    ctx.save();
+    ctx.rotate(hr * (Math.PI / 6) + min * (Math.PI / 360) + sec * (Math.PI / 21600));
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = '#fff';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(110, 0);
+    ctx.stroke();
+    ctx.fillStyle = '#34434c';
+    ctx.arc(102, 0, 3, 0, Math.PI * 2, true);
+    ctx.fill();
+    ctx.restore();
+
+    //分针
+    ctx.save();
+    ctx.rotate(min * (Math.PI / 30) + sec * (Math.PI / 1800));
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#fff';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(135, 0);
+    ctx.stroke();
+
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#34434c';
+    ctx.beginPath();
+    ctx.moveTo(130, 0);
+    ctx.lineTo(115, 0);
+    ctx.stroke();
+    ctx.restore();
+
+    //秒针
+    ctx.save();
+    ctx.rotate(sec * (Math.PI / 30));
+    ctx.beginPath();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#fff';
+    ctx.moveTo(0, 0);
+    ctx.lineTo(141, 0);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.lineWidth = 12;
+    ctx.strokeStyle = '#fff';
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-38, 0);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.fillStyle = '#fff';
+    ctx.arc(0, 0, 15, 0, Math.PI * 2, true);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.strokeStyle = '#cdd2d5';
+    ctx.lineWidth = 1;
+    ctx.arc(0, 0, 8, 0, Math.PI * 2, true);
+    ctx.stroke();
+    ctx.restore();
+
+    //边框
+    ctx.beginPath();
+    ctx.lineWidth = 7;
+    var lingrad2 = ctx.createLinearGradient(150, 0, -150, 0);
+    lingrad2.addColorStop(0, '#adb9c5');
+    lingrad2.addColorStop(1, '#e9eced');
+    ctx.strokeStyle = lingrad2;
+    ctx.arc(0, 0, 152, 0, Math.PI * 2, true);
+    ctx.stroke();
+    ctx.restore();
+
+    window.requestAnimationFrame(clock);
+  }
+  clock()
+</script>
+
+</html>
